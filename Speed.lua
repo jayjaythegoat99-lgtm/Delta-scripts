@@ -18,27 +18,56 @@ _G.WalkSpeedValue, _G.JumpPowerValue, _G.FlySpeedValue, _G.AuraRange = 100, 100,
 
 -- UI SETUP
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "JayJayStealth_V6"
+ScreenGui.Name = "FiveHub_V7"
 ScreenGui.Parent = game.CoreGui
 ScreenGui.ResetOnSpawn = false
 
+-- OPEN/CLOSE BUTTON (Mobile Friendly)
+local OpenBtn = Instance.new("TextButton")
+OpenBtn.Parent = ScreenGui
+OpenBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+OpenBtn.BorderSizePixel = 2
+OpenBtn.Position = UDim2.new(0, 10, 0, 10)
+OpenBtn.Size = UDim2.new(0, 60, 0, 30)
+OpenBtn.Text = "CLOSE"
+OpenBtn.TextColor3 = Color3.new(1, 1, 1)
+OpenBtn.Draggable = true -- You can move the button anywhere
+
 local MainFrame = Instance.new("Frame")
 MainFrame.Parent = ScreenGui
-MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-MainFrame.Size = UDim2.new(0, 180, 0, 220)
+MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+MainFrame.BorderSizePixel = 0
+MainFrame.Size = UDim2.new(0, 180, 0, 250)
 MainFrame.Position = UDim2.new(0.1, 0, 0.3, 0)
 MainFrame.Active = true
 MainFrame.Draggable = true
 
--- TAB BAR (4 Tabs)
+-- TITLE BAR
+local Title = Instance.new("TextLabel")
+Title.Parent = MainFrame
+Title.Size = UDim2.new(1, 0, 0, 30)
+Title.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+Title.Text = "5 HUB"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.Font = Enum.Font.SourceSansBold
+Title.TextSize = 18
+
+-- OPEN/CLOSE LOGIC
+OpenBtn.MouseButton1Click:Connect(function()
+    MainFrame.Visible = not MainFrame.Visible
+    OpenBtn.Text = MainFrame.Visible and "CLOSE" or "OPEN"
+end)
+
+-- TAB BAR
 local TabBar = Instance.new("Frame")
-TabBar.Size = UDim2.new(1, 0, 0, 30)
-TabBar.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+TabBar.Size = UDim2.new(1, 0, 0, 25)
+TabBar.Position = UDim2.new(0, 0, 0, 30)
+TabBar.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 TabBar.Parent = MainFrame
 
 local function CreateTabBtn(text, pos)
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0.25, 0, 1, 0) -- Adjusted for 4 buttons
+    btn.Size = UDim2.new(0.25, 0, 1, 0)
     btn.Position = UDim2.new(pos, 0, 0, 0)
     btn.Text = text
     btn.TextSize = 10
@@ -53,8 +82,8 @@ local EspTabBtn = CreateTabBtn("ESP", 0.75)
 
 local function CreatePage()
     local page = Instance.new("ScrollingFrame")
-    page.Size = UDim2.new(1, 0, 1, -30)
-    page.Position = UDim2.new(0, 0, 0, 30)
+    page.Size = UDim2.new(1, 0, 1, -55)
+    page.Position = UDim2.new(0, 0, 0, 55)
     page.BackgroundTransparency = 1
     page.Visible = false
     page.Parent = MainFrame
@@ -65,7 +94,6 @@ end
 local MainPage, CombatPage, AuraPage, EspPage = CreatePage(), CreatePage(), CreatePage(), CreatePage()
 MainPage.Visible = true
 
--- TAB SWITCHING
 MainTabBtn.MouseButton1Click:Connect(function() MainPage.Visible, CombatPage.Visible, AuraPage.Visible, EspPage.Visible = true, false, false, false end)
 CombatTabBtn.MouseButton1Click:Connect(function() MainPage.Visible, CombatPage.Visible, AuraPage.Visible, EspPage.Visible = false, true, false, false end)
 AuraTabBtn.MouseButton1Click:Connect(function() MainPage.Visible, CombatPage.Visible, AuraPage.Visible, EspPage.Visible = false, false, true, false end)
@@ -93,65 +121,40 @@ AddToggle("AutoClick", CombatPage, function(v) _G.AutoClicker = v end)
 AddToggle("Kill Aura", AuraPage, function(v) _G.KillAura = v end)
 AddToggle("Box ESP", EspPage, function(v) _G.EspEnabled = v end)
 
--- ESP LOGIC
-local function CreateESP(plr)
-    local Highlight = Instance.new("Highlight")
-    Highlight.Name = "ESPHighlight"
-    Highlight.FillTransparency = 0.5
-    Highlight.OutlineTransparency = 0
-    Highlight.FillColor = Color3.fromRGB(255, 0, 0)
-    Highlight.Parent = plr.Character
-end
-
-RunService.RenderStepped:Connect(function()
-    for _, plr in pairs(Players:GetPlayers()) do
-        if plr ~= LocalPlayer and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
-            local highlight = plr.Character:FindFirstChild("ESPHighlight")
-            if _G.EspEnabled then
-                if not highlight then
-                    CreateESP(plr)
-                end
-            else
-                if highlight then
-                    highlight:Destroy()
-                end
-            end
-        end
-    end
-end)
-
--- INF JUMP FIX
+-- ESP / JUMP / FLY / CLICKER LOGIC (RETAINED FROM PREVIOUS)
 UserInputService.JumpRequest:Connect(function()
-    if _G.JumpEnabled then
-        LocalPlayer.Character:FindFirstChildOfClass("Humanoid"):ChangeState("Jumping")
-    end
+    if _G.JumpEnabled then LocalPlayer.Character:FindFirstChildOfClass("Humanoid"):ChangeState("Jumping") end
 end)
 
--- MOVEMENT & FLY
 RunService.RenderStepped:Connect(function()
     if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
-        local hum = LocalPlayer.Character.Humanoid
         local hrp = LocalPlayer.Character.HumanoidRootPart
         if _G.Flying and hrp then
-            hum.PlatformStand = true
+            LocalPlayer.Character.Humanoid.PlatformStand = true
             hrp.Velocity = workspace.CurrentCamera.CFrame.LookVector * _G.FlySpeedValue
         else
-            hum.PlatformStand = false
-            hum.WalkSpeed = _G.SpeedEnabled and _G.WalkSpeedValue or 16
+            LocalPlayer.Character.Humanoid.PlatformStand = false
+            LocalPlayer.Character.Humanoid.WalkSpeed = _G.SpeedEnabled and _G.WalkSpeedValue or 16
+        end
+    end
+    for _, plr in pairs(Players:GetPlayers()) do
+        if plr ~= LocalPlayer and plr.Character then
+            local highlight = plr.Character:FindFirstChild("ESPHighlight")
+            if _G.EspEnabled then
+                if not highlight then 
+                    local h = Instance.new("Highlight", plr.Character)
+                    h.Name = "ESPHighlight"
+                    h.FillColor = Color3.new(1, 0, 0)
+                end
+            elseif highlight then highlight:Destroy() end
         end
     end
 end)
 
--- AUTO-CLICKER
 task.spawn(function()
     local VU = game:GetService("VirtualUser")
     while true do
-        if _G.AutoClicker then
-            VU:CaptureController()
-            VU:ClickButton1(Vector2.new(0,0))
-            task.wait(0.01 + (math.random() * 0.02))
-        else
-            task.wait(0.5)
-        end
+        if _G.AutoClicker then VU:CaptureController() VU:ClickButton1(Vector2.new(0,0)) end
+        task.wait(0.01 + (math.random() * 0.02))
     end
 end)
