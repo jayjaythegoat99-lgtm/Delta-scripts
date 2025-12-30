@@ -11,99 +11,138 @@ local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
--- SETTINGS
-_G.SpeedEnabled = true
-_G.JumpEnabled = true
-_G.AutoClicker = false
-_G.Flying = false
-_G.SpeedValue = 100
-_G.JumpPower = 50
-_G.FlySpeed = 50
+-- GLOBAL STATES (Starts everything OFF for safety)
+_G.SpeedEnabled, _G.JumpEnabled, _G.AutoClicker, _G.Flying, _G.KillAura = false, false, false, false, false
+_G.WalkSpeedValue, _G.JumpPowerValue, _G.FlySpeedValue, _G.AuraRange = 100, 100, 50, 14
 
--- CREATE MOBILE UI BUTTONS
+-- UI SETUP (Same Tabbed System)
 local ScreenGui = Instance.new("ScreenGui")
-local ToggleFrame = Instance.new("Frame")
-local ClickerBtn = Instance.new("TextButton")
-local FlyBtn = Instance.new("TextButton")
-local KillBtn = Instance.new("TextButton")
-
-ScreenGui.Name = "DeltaHelpers"
+ScreenGui.Name = "JayJayStealth_V4"
 ScreenGui.Parent = game.CoreGui
-ToggleFrame.Parent = ScreenGui
-ToggleFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-ToggleFrame.Position = UDim2.new(0.05, 0, 0.4, 0)
-ToggleFrame.Size = UDim2.new(0, 120, 0, 150) -- Made frame taller for fly button
-ToggleFrame.Active = true
-ToggleFrame.Draggable = true 
 
-ClickerBtn.Parent = ToggleFrame
-ClickerBtn.Size = UDim2.new(1, 0, 0.33, 0)
-ClickerBtn.Text = "AutoClick: OFF"
-ClickerBtn.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-ClickerBtn.TextColor3 = Color3.new(1,1,1)
+local MainFrame = Instance.new("Frame")
+MainFrame.Parent = ScreenGui
+MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+MainFrame.Size = UDim2.new(0, 180, 0, 220)
+MainFrame.Position = UDim2.new(0.1, 0, 0.3, 0)
+MainFrame.Active = true
+MainFrame.Draggable = true
 
-FlyBtn.Parent = ToggleFrame
-FlyBtn.Position = UDim2.new(0, 0, 0.33, 0)
-FlyBtn.Size = UDim2.new(1, 0, 0.33, 0)
-FlyBtn.Text = "Fly: OFF"
-FlyBtn.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-FlyBtn.TextColor3 = Color3.new(1,1,1)
+local TabBar = Instance.new("Frame")
+TabBar.Size = UDim2.new(1, 0, 0, 30)
+TabBar.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+TabBar.Parent = MainFrame
 
-KillBtn.Parent = ToggleFrame
-KillBtn.Position = UDim2.new(0, 0, 0.66, 0)
-KillBtn.Size = UDim2.new(1, 0, 0.34, 0)
-KillBtn.Text = "RESET CHAR"
-KillBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-KillBtn.TextColor3 = Color3.new(1,1,1)
+local function CreateTabBtn(text, pos)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0.33, 0, 1, 0)
+    btn.Position = UDim2.new(pos, 0, 0, 0)
+    btn.Text = text
+    btn.Parent = TabBar
+    return btn
+end
 
--- BUTTON FUNCTIONS
-ClickerBtn.MouseButton1Click:Connect(function()
-    _G.AutoClicker = not _G.AutoClicker
-    ClickerBtn.Text = _G.AutoClicker and "AutoClick: ON" or "AutoClick: OFF"
-    ClickerBtn.BackgroundColor3 = _G.AutoClicker and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
-end)
+local MainTabBtn = CreateTabBtn("Main", 0)
+local CombatTabBtn = CreateTabBtn("Combat", 0.33)
+local AuraTabBtn = CreateTabBtn("Aura", 0.66)
 
-FlyBtn.MouseButton1Click:Connect(function()
-    _G.Flying = not _G.Flying
-    FlyBtn.Text = _G.Flying and "Fly: ON" or "Fly: OFF"
-    FlyBtn.BackgroundColor3 = _G.Flying and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
-end)
+local function CreatePage()
+    local page = Instance.new("ScrollingFrame")
+    page.Size = UDim2.new(1, 0, 1, -30)
+    page.Position = UDim2.new(0, 0, 0, 30)
+    page.BackgroundTransparency = 1
+    page.Visible = false
+    page.Parent = MainFrame
+    Instance.new("UIListLayout", page).Padding = UDim.new(0, 5)
+    return page
+end
 
-KillBtn.MouseButton1Click:Connect(function()
-    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
-        LocalPlayer.Character.Humanoid.Health = 0
-    end
-end)
+local MainPage, CombatPage, AuraPage = CreatePage(), CreatePage(), CreatePage()
+MainPage.Visible = true
 
--- FLY LOGIC
-RunService.RenderStepped:Connect(function()
-    if _G.Flying and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-        local root = LocalPlayer.Character.HumanoidRootPart
-        local camera = workspace.CurrentCamera
-        root.Velocity = camera.CFrame.LookVector * _G.FlySpeed
-    end
-end)
+MainTabBtn.MouseButton1Click:Connect(function() MainPage.Visible, CombatPage.Visible, AuraPage.Visible = true, false, false end)
+CombatTabBtn.MouseButton1Click:Connect(function() MainPage.Visible, CombatPage.Visible, AuraPage.Visible = false, true, false end)
+AuraTabBtn.MouseButton1Click:Connect(function() MainPage.Visible, CombatPage.Visible, AuraPage.Visible = false, false, true end)
 
--- CONSTANT LOOP (Fixes Speed & Jump)
-RunService.RenderStepped:Connect(function()
-    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
-        if not _G.Flying then
-            LocalPlayer.Character.Humanoid.WalkSpeed = _G.SpeedValue
-            LocalPlayer.Character.Humanoid.JumpPower = _G.JumpPower
-        else
-            LocalPlayer.Character.Humanoid.WalkSpeed = 0 -- Disable walking while flying
-        end
-    end
-end)
+local function AddToggle(name, parent, callback)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(1, -10, 0, 35)
+    btn.Text = name .. ": OFF"
+    btn.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
+    btn.Parent = parent
+    local enabled = false
+    btn.MouseButton1Click:Connect(function()
+        enabled = not enabled
+        btn.Text = name .. ": " .. (enabled and "ON" or "OFF")
+        btn.BackgroundColor3 = enabled and Color3.fromRGB(50, 180, 50) or Color3.fromRGB(180, 50, 50)
+        callback(enabled)
+    end)
+end
 
--- AUTO-CLICKER ENGINE
+AddToggle("Speed", MainPage, function(v) _G.SpeedEnabled = v end)
+AddToggle("Inf Jump", MainPage, function(v) _G.JumpEnabled = v end)
+AddToggle("Fly", MainPage, function(v) _G.Flying = v end)
+AddToggle("AutoClick", CombatPage, function(v) _G.AutoClicker = v end)
+AddToggle("Kill Aura", AuraPage, function(v) _G.KillAura = v end)
+
+-- STEALTH LOGIC 1: RANDOMIZED CLICKER (Prevents "Pattern Detection")
 task.spawn(function()
-    local VirtualUser = game:GetService("VirtualUser")
+    local VU = game:GetService("VirtualUser")
     while true do
         if _G.AutoClicker then
-            VirtualUser:CaptureController()
-            VirtualUser:ClickButton1(Vector2.new(0,0))
+            VU:CaptureController()
+            VU:ClickButton1(Vector2.new(0,0))
+            -- Random wait between 0.01 and 0.03 makes it look human
+            task.wait(0.01 + (math.random() * 0.02))
+        else
+            task.wait(0.5)
         end
-        task.wait(0.01)
+    end
+end)
+
+-- STEALTH LOGIC 2: RAYCAST KILL AURA (Only hits if they aren't behind walls)
+task.spawn(function()
+    while task.wait(0.1) do
+        if _G.KillAura and LocalPlayer.Character then
+            for _, player in pairs(Players:GetPlayers()) do
+                if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                    local targetPos = player.Character.HumanoidRootPart.Position
+                    local myPos = LocalPlayer.Character.HumanoidRootPart.Position
+                    local dist = (myPos - targetPos).Magnitude
+                    
+                    if dist <= _G.AuraRange then
+                        -- Check if player is visible (not through walls)
+                        local ray = Ray.new(myPos, (targetPos - myPos).Unit * _G.AuraRange)
+                        local hit = workspace:FindPartOnRayWithIgnoreList(ray, {LocalPlayer.Character})
+                        
+                        if hit and hit:IsDescendantOf(player.Character) then
+                            local tool = LocalPlayer.Character:FindFirstChildOfClass("Tool")
+                            if tool then tool:Activate() end
+                        end
+                    end
+                end
+            end
+        end
+    end
+end)
+
+-- STEALTH LOGIC 3: SMOOTH SPEED (Avoids "Teleport" flag)
+RunService.RenderStepped:Connect(function()
+    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+        local hum = LocalPlayer.Character.Humanoid
+        local hrp = LocalPlayer.Character.HumanoidRootPart
+        
+        if _G.Flying and hrp then
+            hum.PlatformStand = true
+            hrp.Velocity = workspace.CurrentCamera.CFrame.LookVector * _G.FlySpeedValue
+        else
+            hum.PlatformStand = false
+            -- Apply speed only when moving so you don't jitter
+            if _G.SpeedEnabled and hum.MoveDirection.Magnitude > 0 then
+                hum.WalkSpeed = _G.WalkSpeedValue
+            else
+                hum.WalkSpeed = 16
+            end
+        end
     end
 end)
