@@ -12,15 +12,14 @@ local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local TeleportService = game:GetService("TeleportService")
 local LocalPlayer = Players.LocalPlayer
-local Camera = workspace.CurrentCamera
 
 -- GLOBAL STATES
 _G.SpeedEnabled, _G.JumpEnabled, _G.AutoClicker, _G.Flying, _G.KillAura, _G.EspEnabled = false, false, false, false, false, false
 _G.WalkSpeedValue, _G.JumpPowerValue, _G.FlySpeedValue = 100, 100, 50
 
--- UI SETUP (Sidebar Style)
+-- UI SETUP
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "FiveHub_V9"
+ScreenGui.Name = "FiveHub_V10"
 ScreenGui.Parent = game.CoreGui
 ScreenGui.ResetOnSpawn = false
 
@@ -41,7 +40,7 @@ MainFrame.Position = UDim2.new(0.5, -175, 0.5, -110)
 MainFrame.Active = true
 MainFrame.Draggable = true
 
--- SIDEBAR & PAGES (Code simplified for brevity, same as V8)
+-- SIDEBAR & NAVIGATION
 local SideBar = Instance.new("Frame")
 SideBar.Size = UDim2.new(0, 100, 1, 0)
 SideBar.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
@@ -77,7 +76,7 @@ end
 local MainPage, CombatPage, AuraPage, EspPage = CreatePage(), CreatePage(), CreatePage(), CreatePage()
 MainPage.Visible = true
 
--- TOGGLE & ACTION FUNCTIONS
+-- HELPERS
 local function AddToggle(name, parent, callback)
     local btn = Instance.new("TextButton")
     btn.Size = UDim2.new(1, -10, 0, 35)
@@ -94,63 +93,89 @@ local function AddToggle(name, parent, callback)
     end)
 end
 
+-- PAGE CONTENT
 AddToggle("Speed Boost", MainPage, function(v) _G.SpeedEnabled = v end)
 AddToggle("Infinity Jump", MainPage, function(v) _G.JumpEnabled = v end)
 AddToggle("Fly Mode", MainPage, function(v) _G.Flying = v end)
-AddToggle("Box ESP", EspPage, function(v) _G.EspEnabled = v end)
+Instance.new("TextButton", MainPage).Text = "Rejoin" -- Simple Rejoin
+MainPage:GetChildren()[#MainPage:GetChildren()].MouseButton1Click:Connect(function() TeleportService:Teleport(game.PlaceId, LocalPlayer) end)
 
--- BOX ESP LOGIC
-local function CreateBox()
-    local Box = Instance.new("Frame")
-    Box.Name = "ESPBox"
-    Box.BackgroundTransparency = 1
-    Box.BorderSizePixel = 2
-    Box.BorderColor3 = Color3.fromRGB(255, 0, 0)
-    Box.Size = UDim2.new(0, 0, 0, 0)
-    Box.Visible = false
-    
-    local Label = Instance.new("TextLabel")
-    Label.BackgroundTransparency = 1
-    Label.Position = UDim2.new(0, 0, 0, -20)
-    Label.Size = UDim2.new(1, 0, 0, 20)
-    Label.TextColor3 = Color3.new(1, 1, 1)
-    Label.TextSize = 12
-    Label.Parent = Box
-    
-    return Box
-end
+AddToggle("AutoClicker", CombatPage, function(v) _G.AutoClicker = v end)
+AddToggle("Kill Aura", AuraPage, function(v) _G.KillAura = v end)
+AddToggle("Wall Hacks", EspPage, function(v) _G.EspEnabled = v end)
 
-RunService.RenderStepped:Connect(function()
-    for _, plr in pairs(Players:GetPlayers()) do
-        if plr ~= LocalPlayer then
-            local boxName = plr.Name .. "_ESP"
-            local Box = ScreenGui:FindFirstChild(boxName) or CreateBox()
-            Box.Name = boxName
-            Box.Parent = ScreenGui
-            
-            if _G.EspEnabled and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
-                local hrp = plr.Character.HumanoidRootPart
-                local pos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
-                
-                if onScreen then
-                    local size = (Camera:WorldToViewportPoint(hrp.Position - Vector3.new(0, 3, 0)).Y - Camera:WorldToViewportPoint(hrp.Position + Vector3.new(0, 2.6, 0)).Y)
-                    Box.Size = UDim2.new(0, size * 0.7, 0, size)
-                    Box.Position = UDim2.new(0, pos.X - Box.Size.X.Offset / 2, 0, pos.Y - Box.Size.Y.Offset / 2)
-                    Box.Visible = true
-                    Box.TextLabel.Text = plr.Name
-                else
-                    Box.Visible = false
-                end
-            else
-                Box.Visible = false
-            end
-        end
-    end
-end)
-
--- TABS LOGIC
+-- TAB LOGIC
 MainTabBtn.MouseButton1Click:Connect(function() MainPage.Visible, CombatPage.Visible, AuraPage.Visible, EspPage.Visible = true, false, false, false end)
 CombatTabBtn.MouseButton1Click:Connect(function() MainPage.Visible, CombatPage.Visible, AuraPage.Visible, EspPage.Visible = false, true, false, false end)
 AuraTabBtn.MouseButton1Click:Connect(function() MainPage.Visible, CombatPage.Visible, AuraPage.Visible, EspPage.Visible = false, false, true, false end)
 EspTabBtn.MouseButton1Click:Connect(function() MainPage.Visible, CombatPage.Visible, AuraPage.Visible, EspPage.Visible = false, false, false, true end)
 OpenBtn.MouseButton1Click:Connect(function() MainFrame.Visible = not MainFrame.Visible end)
+
+-- FIXED WALL HACK (ESP) LOGIC
+local function ApplyESP(plr)
+    if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+        local hrp = plr.Character.HumanoidRootPart
+        if not hrp:FindFirstChild("FiveHub_ESP") then
+            local bgui = Instance.new("BillboardGui", hrp)
+            bgui.Name = "FiveHub_ESP"
+            bgui.AlwaysOnTop = true
+            bgui.Size = UDim2.new(4, 0, 5.5, 0)
+            
+            local frame = Instance.new("Frame", bgui)
+            frame.Size = UDim2.new(1, 0, 1, 0)
+            frame.BackgroundTransparency = 1
+            Instance.new("UIStroke", frame).Color = Color3.new(1, 0, 0)
+            
+            local name = Instance.new("TextLabel", bgui)
+            name.Text = plr.Name
+            name.Size = UDim2.new(1, 0, 0, 20)
+            name.Position = UDim2.new(0, 0, 0, -25)
+            name.TextColor3 = Color3.new(1, 1, 1)
+            name.BackgroundTransparency = 1
+            
+            -- Chams Effect
+            local highlight = Instance.new("Highlight", plr.Character)
+            highlight.Name = "FiveHub_Chams"
+            highlight.FillColor = Color3.new(1, 0, 0)
+            highlight.FillTransparency = 0.5
+        end
+    end
+end
+
+RunService.Heartbeat:Connect(function()
+    for _, plr in pairs(Players:GetPlayers()) do
+        if plr ~= LocalPlayer and plr.Character then
+            local hrp = plr.Character:FindFirstChild("HumanoidRootPart")
+            if _G.EspEnabled and hrp then
+                ApplyESP(plr)
+            else
+                if hrp and hrp:FindFirstChild("FiveHub_ESP") then hrp.FiveHub_ESP:Destroy() end
+                if plr.Character:FindFirstChild("FiveHub_Chams") then plr.Character.FiveHub_Chams:Destroy() end
+            end
+        end
+    end
+end)
+
+-- JUMP / SPEED / CLICKER LOOPS (Same as V9)
+UserInputService.JumpRequest:Connect(function()
+    if _G.JumpEnabled then LocalPlayer.Character.Humanoid:ChangeState("Jumping") end
+end)
+RunService.RenderStepped:Connect(function()
+    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+        local hrp = LocalPlayer.Character.HumanoidRootPart
+        if _G.Flying and hrp then
+            LocalPlayer.Character.Humanoid.PlatformStand = true
+            hrp.Velocity = workspace.CurrentCamera.CFrame.LookVector * _G.FlySpeedValue
+        else
+            LocalPlayer.Character.Humanoid.PlatformStand = false
+            LocalPlayer.Character.Humanoid.WalkSpeed = _G.SpeedEnabled and _G.WalkSpeedValue or 16
+        end
+    end
+end)
+task.spawn(function()
+    local VU = game:GetService("VirtualUser")
+    while true do
+        if _G.AutoClicker then VU:CaptureController() VU:ClickButton1(Vector2.new(0,0)) end
+        task.wait(0.01 + (math.random() * 0.02))
+    end
+end)
