@@ -1,156 +1,109 @@
--- Delta Stealth Hub v1.7 (Final)
--- KEY_HOLDER (The GitHub Action updates the key below)
-local CorrectKey = "MYPRIVATEKEY" 
+local CorrectKey = "MYPRIVATEKEY"
 
--- KEY PROTECTION
+-- PROTECTION
 if _G.Key ~= CorrectKey then
-    game.Players.LocalPlayer:Kick("Access Denied: Incorrect or Missing Key.")
+    game.Players.LocalPlayer:Kick("Access Denied: Incorrect Key")
     return
 end
 
 -- SERVICES
 local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
-local TeleportService = game:GetService("TeleportService")
-local HttpService = game:GetService("HttpService")
-local player = game.Players.LocalPlayer
-local mouse = player:GetMouse()
-local camera = game.Workspace.CurrentCamera
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
 
--- UI SETUP
-local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
-local Frame = Instance.new("Frame", ScreenGui)
-Frame.Size = UDim2.new(0, 200, 0, 280)
-Frame.Position = UDim2.new(0.1, 0, 0.3, 0)
-Frame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
-Frame.Active = true
-Frame.Draggable = true
-Instance.new("UICorner", Frame)
+-- SETTINGS
+_G.SpeedEnabled = true
+_G.JumpEnabled = true
+_G.AutoClicker = false
+_G.Flying = false
+_G.SpeedValue = 100
+_G.JumpPower = 50
+_G.FlySpeed = 50
 
-local function createBtn(text, pos, color)
-    local btn = Instance.new("TextButton", Frame)
-    btn.Size = UDim2.new(0.9, 0, 0, 32)
-    btn.Position = pos
-    btn.Text = text
-    btn.BackgroundColor3 = color
-    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btn.Font = Enum.Font.SourceSansBold
-    btn.TextSize = 14
-    Instance.new("UICorner", btn)
-    return btn
-end
+-- CREATE MOBILE UI BUTTONS
+local ScreenGui = Instance.new("ScreenGui")
+local ToggleFrame = Instance.new("Frame")
+local ClickerBtn = Instance.new("TextButton")
+local FlyBtn = Instance.new("TextButton")
+local KillBtn = Instance.new("TextButton")
 
--- BUTTONS
-local SBtn = createBtn("Stealth Speed: OFF", UDim2.new(0.05, 0, 0.05, 0), Color3.fromRGB(40, 40, 40))
-local JBtn = createBtn("Infinite Jump: OFF", UDim2.new(0.05, 0, 0.18, 0), Color3.fromRGB(40, 40, 40))
-local EBtn = createBtn("ESP / Wallhack: OFF", UDim2.new(0.05, 0, 0.31, 0), Color3.fromRGB(40, 40, 40))
-local ABtn = createBtn("Smooth Aimbot: OFF", UDim2.new(0.05, 0, 0.44, 0), Color3.fromRGB(40, 40, 40))
-local HBtn = createBtn("Server Hop", UDim2.new(0.05, 0, 0.57, 0), Color3.fromRGB(70, 30, 100))
-local KBtn = createBtn("Copy Key Link", UDim2.new(0.05, 0, 0.70, 0), Color3.fromRGB(0, 100, 200))
-local MBtn = createBtn("Minimize", UDim2.new(0.05, 0, 0.85, 0), Color3.fromRGB(120, 30, 30))
+ScreenGui.Name = "DeltaHelpers"
+ScreenGui.Parent = game.CoreGui
+ToggleFrame.Parent = ScreenGui
+ToggleFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+ToggleFrame.Position = UDim2.new(0.05, 0, 0.4, 0)
+ToggleFrame.Size = UDim2.new(0, 120, 0, 150) -- Made frame taller for fly button
+ToggleFrame.Active = true
+ToggleFrame.Draggable = true 
 
--- STATES
-local speedActive, infJumpActive, espActive, aimbotActive = false, false, false, false
+ClickerBtn.Parent = ToggleFrame
+ClickerBtn.Size = UDim2.new(1, 0, 0.33, 0)
+ClickerBtn.Text = "AutoClick: OFF"
+ClickerBtn.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+ClickerBtn.TextColor3 = Color3.new(1,1,1)
 
--- SPEED LOGIC (28.8 Stealth)
-RunService.Stepped:Connect(function()
-    if speedActive then
-        pcall(function()
-            local hum = player.Character.Humanoid
-            local root = player.Character.HumanoidRootPart
-            if hum.MoveDirection.Magnitude > 0 then
-                root.CFrame = root.CFrame + (hum.MoveDirection * (28.8 / 55))
-            end
-        end)
+FlyBtn.Parent = ToggleFrame
+FlyBtn.Position = UDim2.new(0, 0, 0.33, 0)
+FlyBtn.Size = UDim2.new(1, 0, 0.33, 0)
+FlyBtn.Text = "Fly: OFF"
+FlyBtn.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+FlyBtn.TextColor3 = Color3.new(1,1,1)
+
+KillBtn.Parent = ToggleFrame
+KillBtn.Position = UDim2.new(0, 0, 0.66, 0)
+KillBtn.Size = UDim2.new(1, 0, 0.34, 0)
+KillBtn.Text = "RESET CHAR"
+KillBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+KillBtn.TextColor3 = Color3.new(1,1,1)
+
+-- BUTTON FUNCTIONS
+ClickerBtn.MouseButton1Click:Connect(function()
+    _G.AutoClicker = not _G.AutoClicker
+    ClickerBtn.Text = _G.AutoClicker and "AutoClick: ON" or "AutoClick: OFF"
+    ClickerBtn.BackgroundColor3 = _G.AutoClicker and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+end)
+
+FlyBtn.MouseButton1Click:Connect(function()
+    _G.Flying = not _G.Flying
+    FlyBtn.Text = _G.Flying and "Fly: ON" or "Fly: OFF"
+    FlyBtn.BackgroundColor3 = _G.Flying and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+end)
+
+KillBtn.MouseButton1Click:Connect(function()
+    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+        LocalPlayer.Character.Humanoid.Health = 0
     end
 end)
 
--- ESP LOGIC
+-- FLY LOGIC
 RunService.RenderStepped:Connect(function()
-    if espActive then
-        for _, p in pairs(game.Players:GetPlayers()) do
-            if p ~= player and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-                if not p.Character:FindFirstChild("Highlight") then
-                    local h = Instance.new("Highlight", p.Character)
-                    h.FillColor = Color3.fromRGB(255, 0, 0)
-                end
-            end
-        end
-    else
-        for _, p in pairs(game.Players:GetPlayers()) do
-            if p.Character and p.Character:FindFirstChild("Highlight") then
-                p.Character.Highlight:Destroy()
-            end
-        end
+    if _G.Flying and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        local root = LocalPlayer.Character.HumanoidRootPart
+        local camera = workspace.CurrentCamera
+        root.Velocity = camera.CFrame.LookVector * _G.FlySpeed
     end
 end)
 
--- AIMBOT LOGIC
-local function getClosest()
-    local target, dist = nil, math.huge
-    for _, v in pairs(game.Players:GetPlayers()) do
-        if v ~= player and v.Character and v.Character:FindFirstChild("Head") then
-            local pos, vis = camera:WorldToViewportPoint(v.Character.Head.Position)
-            if vis then
-                local mDist = (Vector2.new(mouse.X, mouse.Y) - Vector2.new(pos.X, pos.Y)).Magnitude
-                if mDist < dist then dist = mDist; target = v end
-            end
-        end
-    end
-    return target
-end
-
+-- CONSTANT LOOP (Fixes Speed & Jump)
 RunService.RenderStepped:Connect(function()
-    if aimbotActive and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
-        local t = getClosest()
-        if t then camera.CFrame = camera.CFrame:Lerp(CFrame.new(camera.CFrame.Position, t.Character.Head.Position), 0.1) end
-    end
-end)
-
--- JUMP LOGIC
-UserInputService.JumpRequest:Connect(function()
-    if infJumpActive then player.Character:FindFirstChildOfClass("Humanoid"):ChangeState("Jumping") end
-end)
-
--- BUTTON CLICKS
-SBtn.MouseButton1Click:Connect(function()
-    speedActive = not speedActive
-    SBtn.Text = speedActive and "Speed: ON" or "Speed: OFF"
-    SBtn.BackgroundColor3 = speedActive and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(40, 40, 40)
-end)
-
-JBtn.MouseButton1Click:Connect(function()
-    infJumpActive = not infJumpActive
-    JBtn.Text = infJumpActive and "Inf Jump: ON" or "Inf Jump: OFF"
-    JBtn.BackgroundColor3 = infJumpActive and Color3.fromRGB(0, 80, 150) or Color3.fromRGB(40, 40, 40)
-end)
-
-EBtn.MouseButton1Click:Connect(function()
-    espActive = not espActive
-    EBtn.BackgroundColor3 = espActive and Color3.fromRGB(200, 100, 0) or Color3.fromRGB(40, 40, 40)
-end)
-
-ABtn.MouseButton1Click:Connect(function()
-    aimbotActive = not aimbotActive
-    ABtn.BackgroundColor3 = aimbotActive and Color3.fromRGB(200, 0, 0) or Color3.fromRGB(40, 40, 40)
-end)
-
-HBtn.MouseButton1Click:Connect(function()
-    local Servers = HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"))
-    for _, v in pairs(Servers.data) do
-        if v.playing < v.maxPlayers and v.id ~= game.JobId then
-            TeleportService:TeleportToPlaceInstance(game.PlaceId, v.id, player)
-            break
+    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+        if not _G.Flying then
+            LocalPlayer.Character.Humanoid.WalkSpeed = _G.SpeedValue
+            LocalPlayer.Character.Humanoid.JumpPower = _G.JumpPower
+        else
+            LocalPlayer.Character.Humanoid.WalkSpeed = 0 -- Disable walking while flying
         end
     end
 end)
 
-KBtn.MouseButton1Click:Connect(function()
-    setclipboard("YOUR_LINKVERTISE_LINK_HERE")
-end)
-
-MBtn.MouseButton1Click:Connect(function()
-    local mini = (Frame.Size.Y.Offset == 280)
-    Frame.Size = mini and UDim2.new(0, 200, 0, 40) or UDim2.new(0, 200, 0, 280)
-    MBtn.Text = mini and "+" or "Minimize"
+-- AUTO-CLICKER ENGINE
+task.spawn(function()
+    local VirtualUser = game:GetService("VirtualUser")
+    while true do
+        if _G.AutoClicker then
+            VirtualUser:CaptureController()
+            VirtualUser:ClickButton1(Vector2.new(0,0))
+        end
+        task.wait(0.01)
+    end
 end)
