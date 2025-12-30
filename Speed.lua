@@ -12,18 +12,18 @@ local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local TeleportService = game:GetService("TeleportService")
 local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
 
 -- GLOBAL STATES
 _G.SpeedEnabled, _G.JumpEnabled, _G.AutoClicker, _G.Flying, _G.KillAura, _G.EspEnabled = false, false, false, false, false, false
 _G.WalkSpeedValue, _G.JumpPowerValue, _G.FlySpeedValue = 100, 100, 50
 
--- UI SETUP
+-- UI SETUP (Sidebar Style)
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "FiveHub_V8"
+ScreenGui.Name = "FiveHub_V9"
 ScreenGui.Parent = game.CoreGui
 ScreenGui.ResetOnSpawn = false
 
--- MODERN OPEN/CLOSE TOGGLE
 local OpenBtn = Instance.new("TextButton")
 OpenBtn.Parent = ScreenGui
 OpenBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
@@ -36,13 +36,12 @@ OpenBtn.Draggable = true
 local MainFrame = Instance.new("Frame")
 MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
-MainFrame.Size = UDim2.new(0, 350, 0, 220) -- Wider for sidebar look
+MainFrame.Size = UDim2.new(0, 350, 0, 220)
 MainFrame.Position = UDim2.new(0.5, -175, 0.5, -110)
-MainFrame.Visible = true
 MainFrame.Active = true
 MainFrame.Draggable = true
 
--- SIDEBAR (Left Side)
+-- SIDEBAR & PAGES (Code simplified for brevity, same as V8)
 local SideBar = Instance.new("Frame")
 SideBar.Size = UDim2.new(0, 100, 1, 0)
 SideBar.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
@@ -64,7 +63,6 @@ local CombatTabBtn = CreateTabBtn("Combat", 50)
 local AuraTabBtn = CreateTabBtn("Aura", 90)
 local EspTabBtn = CreateTabBtn("ESP", 130)
 
--- PAGE SETUP
 local function CreatePage()
     local page = Instance.new("ScrollingFrame")
     page.Size = UDim2.new(1, -110, 1, -10)
@@ -79,12 +77,7 @@ end
 local MainPage, CombatPage, AuraPage, EspPage = CreatePage(), CreatePage(), CreatePage(), CreatePage()
 MainPage.Visible = true
 
--- REJOIN FUNCTION
-local function Rejoin()
-    TeleportService:Teleport(game.PlaceId, LocalPlayer)
-end
-
--- BUTTONS
+-- TOGGLE & ACTION FUNCTIONS
 local function AddToggle(name, parent, callback)
     local btn = Instance.new("TextButton")
     btn.Size = UDim2.new(1, -10, 0, 35)
@@ -101,50 +94,63 @@ local function AddToggle(name, parent, callback)
     end)
 end
 
-local function AddAction(name, parent, callback)
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1, -10, 0, 35)
-    btn.Text = name
-    btn.BackgroundColor3 = Color3.fromRGB(70, 70, 100)
-    btn.TextColor3 = Color3.new(1, 1, 1)
-    btn.Parent = parent
-    btn.MouseButton1Click:Connect(callback)
-end
-
--- PAGE CONTENT
 AddToggle("Speed Boost", MainPage, function(v) _G.SpeedEnabled = v end)
 AddToggle("Infinity Jump", MainPage, function(v) _G.JumpEnabled = v end)
 AddToggle("Fly Mode", MainPage, function(v) _G.Flying = v end)
-AddAction("Rejoin Server", MainPage, Rejoin) -- NEW REJOIN BUTTON
+AddToggle("Box ESP", EspPage, function(v) _G.EspEnabled = v end)
 
-AddToggle("AutoClicker", CombatPage, function(v) _G.AutoClicker = v end)
-AddAction("Reset Character", CombatPage, function() LocalPlayer.Character.Humanoid.Health = 0 end)
+-- BOX ESP LOGIC
+local function CreateBox()
+    local Box = Instance.new("Frame")
+    Box.Name = "ESPBox"
+    Box.BackgroundTransparency = 1
+    Box.BorderSizePixel = 2
+    Box.BorderColor3 = Color3.fromRGB(255, 0, 0)
+    Box.Size = UDim2.new(0, 0, 0, 0)
+    Box.Visible = false
+    
+    local Label = Instance.new("TextLabel")
+    Label.BackgroundTransparency = 1
+    Label.Position = UDim2.new(0, 0, 0, -20)
+    Label.Size = UDim2.new(1, 0, 0, 20)
+    Label.TextColor3 = Color3.new(1, 1, 1)
+    Label.TextSize = 12
+    Label.Parent = Box
+    
+    return Box
+end
 
-AddToggle("Kill Aura", AuraPage, function(v) _G.KillAura = v end)
-AddToggle("Player ESP", EspPage, function(v) _G.EspEnabled = v end)
+RunService.RenderStepped:Connect(function()
+    for _, plr in pairs(Players:GetPlayers()) do
+        if plr ~= LocalPlayer then
+            local boxName = plr.Name .. "_ESP"
+            local Box = ScreenGui:FindFirstChild(boxName) or CreateBox()
+            Box.Name = boxName
+            Box.Parent = ScreenGui
+            
+            if _G.EspEnabled and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+                local hrp = plr.Character.HumanoidRootPart
+                local pos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
+                
+                if onScreen then
+                    local size = (Camera:WorldToViewportPoint(hrp.Position - Vector3.new(0, 3, 0)).Y - Camera:WorldToViewportPoint(hrp.Position + Vector3.new(0, 2.6, 0)).Y)
+                    Box.Size = UDim2.new(0, size * 0.7, 0, size)
+                    Box.Position = UDim2.new(0, pos.X - Box.Size.X.Offset / 2, 0, pos.Y - Box.Size.Y.Offset / 2)
+                    Box.Visible = true
+                    Box.TextLabel.Text = plr.Name
+                else
+                    Box.Visible = false
+                end
+            else
+                Box.Visible = false
+            end
+        end
+    end
+end)
 
--- TAB LOGIC
+-- TABS LOGIC
 MainTabBtn.MouseButton1Click:Connect(function() MainPage.Visible, CombatPage.Visible, AuraPage.Visible, EspPage.Visible = true, false, false, false end)
 CombatTabBtn.MouseButton1Click:Connect(function() MainPage.Visible, CombatPage.Visible, AuraPage.Visible, EspPage.Visible = false, true, false, false end)
 AuraTabBtn.MouseButton1Click:Connect(function() MainPage.Visible, CombatPage.Visible, AuraPage.Visible, EspPage.Visible = false, false, true, false end)
 EspTabBtn.MouseButton1Click:Connect(function() MainPage.Visible, CombatPage.Visible, AuraPage.Visible, EspPage.Visible = false, false, false, true end)
-
 OpenBtn.MouseButton1Click:Connect(function() MainFrame.Visible = not MainFrame.Visible end)
-
--- LOOPS (Hacks Logic)
-UserInputService.JumpRequest:Connect(function()
-    if _G.JumpEnabled then LocalPlayer.Character:FindFirstChildOfClass("Humanoid"):ChangeState("Jumping") end
-end)
-
-RunService.RenderStepped:Connect(function()
-    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
-        local hrp = LocalPlayer.Character.HumanoidRootPart
-        if _G.Flying and hrp then
-            LocalPlayer.Character.Humanoid.PlatformStand = true
-            hrp.Velocity = workspace.CurrentCamera.CFrame.LookVector * _G.FlySpeedValue
-        else
-            LocalPlayer.Character.Humanoid.PlatformStand = false
-            LocalPlayer.Character.Humanoid.WalkSpeed = _G.SpeedEnabled and _G.WalkSpeedValue or 16
-        end
-    end
-end)
