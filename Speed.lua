@@ -10,20 +10,21 @@ end
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
+local VirtualUser = game:GetService("VirtualUser")
 local TeleportService = game:GetService("TeleportService")
 local Lighting = game:GetService("Lighting")
 local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
 
 -- GLOBAL STATES
 _G.SpeedEnabled, _G.JumpEnabled, _G.AutoClicker, _G.Flying, _G.KillAura, _G.EspEnabled = false, false, false, false, false, false
-_G.NoClip, _G.FullBright = false, false
+_G.NoClip, _G.FullBright, _G.SuperFastClick = false, false, false
 _G.WalkSpeedValue = 100 
-_G.FlySpeedValue = 50
-_G.AuraRange = 15
+_G.MenuKeybind = Enum.KeyCode.K -- Change "K" to any key you prefer
 
--- UI SETUP
+-- UI SETUP (Rounded & Sidebar)
 local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
-ScreenGui.Name = "FiveHub_Final_V14"
+ScreenGui.Name = "FiveHub_Final_V17"
 
 local function Round(element, radius)
     local corner = Instance.new("UICorner")
@@ -31,6 +32,7 @@ local function Round(element, radius)
     corner.Parent = element
 end
 
+-- OPEN/CLOSE BUTTON
 local OpenBtn = Instance.new("TextButton", ScreenGui)
 OpenBtn.Size = UDim2.new(0, 80, 0, 35)
 OpenBtn.Position = UDim2.new(0, 10, 0, 10)
@@ -40,6 +42,7 @@ OpenBtn.TextColor3 = Color3.new(1, 1, 1)
 OpenBtn.Draggable = true
 Round(OpenBtn, 10)
 
+-- MAIN WINDOW
 local MainFrame = Instance.new("Frame", ScreenGui)
 MainFrame.Size = UDim2.new(0, 350, 0, 250)
 MainFrame.Position = UDim2.new(0.5, -175, 0.5, -125)
@@ -51,7 +54,6 @@ Round(MainFrame, 12)
 local SideBar = Instance.new("Frame", MainFrame)
 SideBar.Size = UDim2.new(0, 100, 1, 0)
 SideBar.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
-SideBar.BorderSizePixel = 0
 Round(SideBar, 12)
 
 local Title = Instance.new("TextLabel", SideBar)
@@ -62,7 +64,7 @@ Title.BackgroundTransparency = 1
 Title.Font = Enum.Font.SourceSansBold
 Title.TextSize = 20
 
--- PAGE NAVIGATION
+-- PAGE SYSTEM
 local function CreatePage()
     local page = Instance.new("ScrollingFrame", MainFrame)
     page.Size = UDim2.new(1, -115, 1, -20)
@@ -93,7 +95,6 @@ local function AddToggle(name, parent, callback)
     end)
 end
 
--- TABS
 local function CreateTab(text, pos, page)
     local btn = Instance.new("TextButton", SideBar)
     btn.Size = UDim2.new(1, -10, 0, 35)
@@ -108,24 +109,35 @@ local function CreateTab(text, pos, page)
     end)
 end
 
+-- TABS & CONTENT
 CreateTab("Player", 50, MainPage)
 CreateTab("Combat", 90, CombatPage)
 CreateTab("Extras", 130, ExtraPage)
 CreateTab("ESP", 170, EspPage)
 
--- CONTENT
 AddToggle("Force Speed", MainPage, function(v) _G.SpeedEnabled = v end)
 AddToggle("Inf Jump", MainPage, function(v) _G.JumpEnabled = v end)
 AddToggle("Fly Mode", MainPage, function(v) _G.Flying = v end)
-AddToggle("AutoClick", CombatPage, function(v) _G.AutoClicker = v end)
+
+AddToggle("AutoClick Center", CombatPage, function(v) _G.AutoClicker = v end)
+AddToggle("Super Fast Mode", CombatPage, function(v) _G.SuperFastClick = v end)
 AddToggle("Kill Aura", CombatPage, function(v) _G.KillAura = v end)
+
 AddToggle("NoClip", ExtraPage, function(v) _G.NoClip = v end)
 AddToggle("FullBright", ExtraPage, function(v) _G.FullBright = v end)
+
 AddToggle("Wall Hacks", EspPage, function(v) _G.EspEnabled = v end)
 
--- 🔥 CORE FORCE LOGIC 🔥
+--- 🔥 CORE SYSTEMS 🔥 ---
 
--- Speed Bypass (CFrame Movement)
+-- KEYBIND SYSTEM
+UserInputService.InputBegan:Connect(function(input, processed)
+    if not processed and input.KeyCode == _G.MenuKeybind then
+        MainFrame.Visible = not MainFrame.Visible
+    end
+end)
+
+-- SPEED BYPASS
 RunService.Stepped:Connect(function()
     if _G.SpeedEnabled and LocalPlayer.Character then
         local hum = LocalPlayer.Character:FindFirstChild("Humanoid")
@@ -136,23 +148,29 @@ RunService.Stepped:Connect(function()
     end
 end)
 
--- Inf Jump Bypass
-UserInputService.JumpRequest:Connect(function()
-    if _G.JumpEnabled and LocalPlayer.Character then
-        local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-        if hum then hum:ChangeState("Jumping") end
+-- AUTO-CLICKER (CENTER SCREEN)
+task.spawn(function()
+    while true do
+        if _G.AutoClicker then
+            local CX, CY = Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2
+            VirtualUser:CaptureController()
+            VirtualUser:ClickButton1(Vector2.new(CX, CY))
+            task.wait(_G.SuperFastClick and 0.001 or 0.02)
+        else
+            task.wait(0.5)
+        end
     end
 end)
 
--- Wall Hacks (Highlight Bypass)
+-- ESP / WALL HACKS (FORCE HIGHLIGHT)
 RunService.Heartbeat:Connect(function()
     for _, plr in pairs(Players:GetPlayers()) do
         if plr ~= LocalPlayer and plr.Character then
-            local highlight = plr.Character:FindFirstChild("FiveHub_Highlight")
+            local highlight = plr.Character:FindFirstChild("FiveHub_High")
             if _G.EspEnabled then
                 if not highlight then
                     local h = Instance.new("Highlight", plr.Character)
-                    h.Name = "FiveHub_Highlight"
+                    h.Name = "FiveHub_High"
                     h.FillColor = Color3.new(1, 0, 0)
                     h.AlwaysOnTop = true
                 end
@@ -161,23 +179,10 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
--- NoClip & Fly Logic
-RunService.RenderStepped:Connect(function()
-    if LocalPlayer.Character then
-        local hum = LocalPlayer.Character:FindFirstChild("Humanoid")
-        local hrp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-        if _G.NoClip then
-            for _, v in pairs(LocalPlayer.Character:GetDescendants()) do
-                if v:IsA("BasePart") then v.CanCollide = false end
-            end
-        end
-        if _G.Flying and hrp then
-            hum.PlatformStand = true
-            hrp.Velocity = workspace.CurrentCamera.CFrame.LookVector * _G.FlySpeedValue
-        elseif hum then
-            hum.PlatformStand = false
-        end
+-- JUMP & UI TOGGLE
+OpenBtn.MouseButton1Click:Connect(function() MainFrame.Visible = not MainFrame.Visible end)
+UserInputService.JumpRequest:Connect(function()
+    if _G.JumpEnabled and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
+        LocalPlayer.Character:FindFirstChildOfClass("Humanoid"):ChangeState("Jumping")
     end
 end)
-
-OpenBtn.MouseButton1Click:Connect(function() MainFrame.Visible = not MainFrame.Visible end)
